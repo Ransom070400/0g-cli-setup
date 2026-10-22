@@ -8,12 +8,22 @@ One thing to know up front: the 0G Router speaks two API formats, OpenAI's and A
 
 | Tool | API format it speaks | Models it can use on 0G |
 | --- | --- | --- |
-| Kilo CLI | Both | All |
-| Kimi Code CLI | Both | All (Claude needs one extra setting) |
-| Codex CLI | OpenAI | Everything except Claude |
-| Claude Code | Anthropic | Claude, plus GLM 5.3, DeepSeek V4, MiMo and a few others |
+| [Kilo CLI](#kilo-cli) | Both | All |
+| [Kimi Code CLI](#kimi-code-cli) | Both | All (Claude needs one extra setting) |
+| [Codex CLI](#openai-codex-cli) | OpenAI | Everything except Claude |
+| [Claude Code](#claude-code) | Anthropic | Claude, plus GLM 5.3, DeepSeek V4, MiMo and a few others |
 
 To check a model's formats, look at `supported_formats` in `curl https://router-api.0g.ai/v1/models`.
+
+## Contents
+
+1. [Get your API key](#get-your-api-key): [sign in](#1-sign-in) · [deposit](#2-deposit-0g-tokens) · [create the key](#3-create-the-key) · [save it](#4-save-the-key-once)
+2. Set up your tool: [Kilo CLI](#kilo-cli) · [Codex CLI](#openai-codex-cli) · [Kimi Code CLI](#kimi-code-cli) · [Claude Code](#claude-code)
+3. [Troubleshooting](#troubleshooting)
+4. [Saving tokens](#saving-tokens)
+5. [Sources](#sources)
+
+Start with **Get your API key**, then go straight to the tool you use.
 
 ## Get your API key
 
@@ -71,6 +81,8 @@ A reply means you're ready. A `402 insufficient_balance` error means the key wor
 
 Note that pc.0g.ai is the dashboard, not the API. Every tool below points at `router-api.0g.ai`.
 
+[↑ Back to contents](#contents)
+
 ## Kilo CLI
 
 Kilo can use every 0G model, including Claude, by defining two providers: one in OpenAI format and one in Anthropic format.
@@ -122,6 +134,8 @@ kilo run -m zerog-claude/claude-sonnet-5 "say hi"
 
 In the app, switch models with `/models`. If you use Kilo's login flow instead of the env var (`kilo auth login`), choose **Other**, not Kilo Gateway, and enter `zerog` as the provider ID.
 
+[↑ Back to contents](#contents)
+
 ## OpenAI Codex CLI
 
 Codex can use every 0G model except Claude, because Codex only speaks OpenAI's Responses format. Setting it up as a profile keeps your normal ChatGPT login as the default.
@@ -153,6 +167,8 @@ Codex can use every 0G model except Claude, because Codex only speaks OpenAI's R
    ```
 
 Codex prints `Model metadata for glm-5.2 not found` on startup. That warning is harmless: it just uses default settings for models it doesn't know.
+
+[↑ Back to contents](#contents)
 
 ## Kimi Code CLI
 
@@ -200,6 +216,8 @@ Two details matter:
 
 Run it from your project folder: `kimi`, or `kimi -m claude-sonnet-5`. If it offers a Kimi account login, skip it; you don't need one, and logging in can rewrite the config.
 
+[↑ Back to contents](#contents)
+
 ## Claude Code
 
 Claude Code speaks Anthropic's format, so on 0G it can use the Claude models plus every other model that supports that format. At the time of writing those are `glm-5.3`, `glm-5.3-flash`, `glm-5.3-flashx`, `deepseek-v4-pro`, `deepseek-v4-flash`, `mimo-v2.6-pro`, `mimo-v2.6-flash`, `step-5-preview`, `hy4-preview` and `0gm-1.0-35b-a3b`.
@@ -239,6 +257,8 @@ What each line does:
 
 On startup Claude Code warns that claude.ai connectors are disabled. That's expected when it uses another provider, and only affects `claude-0g`. With a non-Claude model it may also log `unrecognized_model`; that's harmless.
 
+[↑ Back to contents](#contents)
+
 ## Troubleshooting
 
 | Error | Cause | Fix |
@@ -254,6 +274,8 @@ On startup Claude Code warns that claude.ai connectors are disabled. That's expe
 | `429 rate_limit_exceeded` | Too many requests | Wait for the `Retry-After` time, then retry |
 | 404 on `pc.0g.ai/v1/...` | Dashboard URL used as the API | Use `https://router-api.0g.ai/v1` |
 
+[↑ Back to contents](#contents)
+
 ## Saving tokens
 
 Coding agents use more tokens than chat because they re-send the whole conversation on every step. In testing, a one-word Codex reply cost 12,609 tokens, all of it Codex's own instructions and tool list. A short real task cost 620,913 tokens, about 90% of them cached repeats.
@@ -263,6 +285,8 @@ Coding agents use more tokens than chat because they re-send the whole conversat
 - **Use a flash model for simple jobs** (`glm-5.3-flash`, `deepseek-v4-flash`, `qwen3.7-flash`) and save the big models for hard work.
 - **Lower reasoning effort** for routine tasks; in Codex, add `model_reasoning_effort = "low"` to `~/.codex/zerog.config.toml`.
 
+[↑ Back to contents](#contents)
+
 ## Sources
 
 - [0G Router quickstart](https://docs.0g.ai/developer-hub/building-on-0g/compute-network/router/quickstart)
@@ -271,3 +295,5 @@ Coding agents use more tokens than chat because they re-send the whole conversat
 - [Kilo CLI docs](https://kilo.ai/docs/cli)
 - [Kimi Code: Providers and models](https://www.kimi.com/code/docs/en/kimi-code-cli/configuration/providers.html)
 - [Claude Code: LLM gateway configuration](https://code.claude.com/docs/en/llm-gateway)
+
+[↑ Back to contents](#contents)
