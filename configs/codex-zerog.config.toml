@@ -1,0 +1,4 @@
+# Save as ~/.codex/zerog.config.toml, then run: codex -p zerog
+model_provider = "zerog"
+model = "glm-5.2"
+# model_reasoning_effort = "low"   # uncomment to save tokens on routine tasks

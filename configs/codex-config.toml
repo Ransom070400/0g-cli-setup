@@ -1,0 +1,6 @@
+# Append to ~/.codex/config.toml
+[model_providers.zerog]
+name = "0G Router"
+base_url = "https://router-api.0g.ai/v1"
+env_key = "ZEROG_API_KEY"
+wire_api = "responses"

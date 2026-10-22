@@ -1,0 +1,33 @@
+# ~/.kimi-code/config.toml
+default_model = "kimi-k2.7-code"
+
+# Required for Claude on 0G: stops Kimi sending Anthropic context_management,
+# which 0G rejects with "The upstream provider rejected the request."
+[thinking]
+keep = "off"
+
+[providers.zerog]
+type = "openai"
+base_url = "https://router-api.0g.ai/v1"
+api_key_env = "ZEROG_API_KEY"
+
+# No /v1 here: Kimi adds /v1/messages itself
+[providers.zerog-claude]
+type = "anthropic"
+base_url = "https://router-api.0g.ai"
+api_key_env = "ZEROG_API_KEY"
+
+[models."kimi-k2.7-code"]
+provider = "zerog"
+model = "kimi-k2.7-code"
+max_context_size = 262144
+
+[models."glm-5.2"]
+provider = "zerog"
+model = "glm-5.2"
+max_context_size = 1179648
+
+[models."claude-sonnet-5"]
+provider = "zerog-claude"
+model = "claude-sonnet-5"
+max_context_size = 1000000
