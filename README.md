@@ -1,8 +1,8 @@
-# Using the 0G API from your terminal: Kilo, Codex and Kimi Code
+# Using the 0G API from your terminal: Kilo, Codex, Kimi Code and Claude Code
 
 One 0G API key gives your coding CLIs access to 100+ models (Claude, GPT, Gemini, GLM, Kimi, Qwen, DeepSeek and more) through a single endpoint: `https://router-api.0g.ai/v1`.
 
-This guide sets up three terminal coding agents to use it: **Kilo CLI**, **OpenAI Codex CLI** and **Kimi Code CLI**. Each takes about five minutes. Every config below was tested end to end on macOS with zsh. Ready-to-copy files are in [`configs/`](configs/).
+This guide sets up four terminal coding agents to use it: **Kilo CLI**, **OpenAI Codex CLI**, **Kimi Code CLI** and **Claude Code**. Each takes about five minutes. Every config below was tested end to end on macOS with zsh. Ready-to-copy files are in [`configs/`](configs/).
 
 One thing to know up front: the 0G Router speaks two API formats. Most models use the OpenAI format, but **Claude models only work in Anthropic's format** (`/v1/messages`). That decides which tools can reach Claude, and why some configs below have two providers.
 
@@ -11,6 +11,7 @@ One thing to know up front: the 0G Router speaks two API formats. Most models us
 | Kilo CLI | Yes (`zerog`) | Yes (`zerog-claude`) |
 | Codex CLI | Yes (`-p zerog`) | No: Responses format only |
 | Kimi Code CLI | Yes (`zerog`) | Yes, with `keep = "off"` |
+| Claude Code | No: Anthropic format only | Yes (`claude-0g`) |
 
 ## Step 1: Get a key and save it once
 
@@ -167,6 +168,43 @@ Two details matter:
 
 Run it from your project folder: `kimi`, or `kimi -m claude-sonnet-5`. If it offers a Kimi account login, skip it; you don't need one, and logging in can rewrite the config.
 
+## Step 5: Claude Code
+
+Claude Code speaks Anthropic's format natively, so it can run on 0G's Claude models (not the others). A shell function keeps it separate: `claude-0g` uses 0G, while plain `claude` keeps your normal Anthropic login.
+
+Add [`configs/claude-code.zsh`](configs/claude-code.zsh) to the end of `~/.zshrc`:
+
+```bash
+claude-0g() {
+  CLAUDE_CODE_DISABLE_EXPERIMENTAL_BETAS=1 \
+  ANTHROPIC_BASE_URL="https://router-api.0g.ai" \
+  ANTHROPIC_AUTH_TOKEN="$ZEROG_API_KEY" \
+  ANTHROPIC_API_KEY="" \
+  ANTHROPIC_MODEL="claude-sonnet-5" \
+  ANTHROPIC_DEFAULT_OPUS_MODEL="claude-opus-5.5" \
+  ANTHROPIC_DEFAULT_SONNET_MODEL="claude-sonnet-5" \
+  ANTHROPIC_DEFAULT_HAIKU_MODEL="claude-sonnet-4.5" \
+  claude "$@"
+}
+```
+
+Then `source ~/.zshrc` and run:
+
+```bash
+claude-0g                    # Claude Sonnet 5 on 0G
+claude-0g --model opus       # Claude Opus 5.5 on 0G
+claude-0g --model claude-opus-4.7   # any Claude ID from /v1/models
+```
+
+What each line does:
+
+- `CLAUDE_CODE_DISABLE_EXPERIMENTAL_BETAS=1` is required. Without it, Claude Code sends Anthropic beta features 0G doesn't support, and every request fails with "API Error: 400 The upstream provider rejected the request."
+- `ANTHROPIC_BASE_URL` has **no** `/v1`; Claude Code adds `/v1/messages` itself.
+- `ANTHROPIC_AUTH_TOKEN` sends your 0G key as a Bearer token. `ANTHROPIC_API_KEY=""` stops any real Anthropic key from being used instead.
+- The model lines map Claude Code's names to 0G's model IDs, which use dots (`claude-opus-5.5`). 0G has no Haiku, so background tasks use Sonnet 4.5.
+
+On startup Claude Code warns that claude.ai connectors are disabled. That's expected when it uses another provider, and only affects `claude-0g`.
+
 ## Troubleshooting
 
 | Error | Cause | Fix |
@@ -176,6 +214,7 @@ Run it from your project folder: `kimi`, or `kimi -m claude-sonnet-5`. If it off
 | `model "claude-..." is not available on the openai API format` | Claude sent in OpenAI format | Use an Anthropic-type provider (Kilo, Kimi); not possible in Codex |
 | `--profile zerog cannot be used while config.toml contains legacy ... config` | Codex profile inside `config.toml` | Move it to `~/.codex/zerog.config.toml` |
 | `The upstream provider rejected the request` (Kimi + Claude) | Kimi sends `context_management` | Add `[thinking] keep = "off"` |
+| `API Error: 400 The upstream provider rejected the request` (Claude Code) | Claude Code sends beta features 0G rejects | Set `CLAUDE_CODE_DISABLE_EXPERIMENTAL_BETAS=1` |
 | 404 on `pc.0g.ai/v1/...` | Dashboard URL used as the API | Use `https://router-api.0g.ai/v1` |
 
 ## Saving tokens
@@ -192,3 +231,4 @@ Coding agents use more tokens than chat because they re-send the whole conversat
 - [0G Router quickstart](https://docs.0g.ai/developer-hub/building-on-0g/compute-network/router/quickstart)
 - [Kilo CLI docs](https://kilo.ai/docs/cli)
 - [Kimi Code: Providers and models](https://www.kimi.com/code/docs/en/kimi-code-cli/configuration/providers.html)
+- [Claude Code: LLM gateway configuration](https://code.claude.com/docs/en/llm-gateway)
