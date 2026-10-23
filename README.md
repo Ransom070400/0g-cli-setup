@@ -4,19 +4,30 @@ One 0G API key gives your coding CLIs access to 100+ models (Claude, GPT, Gemini
 
 This guide covers getting a funded API key, then setting up four terminal coding agents to use it: **Kilo CLI**, **OpenAI Codex CLI**, **Kimi Code CLI** and **Claude Code**. Every config below was tested end to end on macOS with zsh. Ready-to-copy files are in [`configs/`](configs/).
 
-One thing to know up front: the 0G Router speaks two API formats, OpenAI's and Anthropic's. Each model supports one or both, and that decides which tools can use it:
+One thing to know up front: the 0G Router speaks three API formats: OpenAI Chat Completions, OpenAI Responses and Anthropic Messages. Each model supports some of them, and that decides which tools can use it:
 
 | Tool | API format it speaks | Models it can use on 0G |
 | --- | --- | --- |
 | [Kilo CLI](#kilo-cli) | Both | All |
 | [Kimi Code CLI](#kimi-code-cli) | Both | All (Claude needs one extra setting) |
-| [Codex CLI](#openai-codex-cli) | OpenAI | Everything except Claude |
+| [Codex CLI](#openai-codex-cli) | OpenAI Responses | Only models listing `responses` (14 today, incl. GLM 5.3 Flash, Qwen3 Coder Flash, GPT-6.1 Sol) |
 | [Claude Code](#claude-code) | Anthropic | Claude, plus GLM 5.3, DeepSeek V4, MiMo and a few others |
 
 To check a model's formats, look at `supported_formats` in `curl https://router-api.0g.ai/v1/models`.
 
+## Quick install
+
+Already have a funded key? One command sets up every supported tool you have installed:
+
+```bash
+curl -fsSL https://raw.githubusercontent.com/<you>/0g-cli-setup/main/install.sh | bash
+```
+
+It asks for your key (hidden as you type), checks it works, saves it to your shell config, and configures Kilo, Codex, Kimi Code and Claude Code with 0G's live model list. It backs up every file it changes and is safe to run again. Read [`install.sh`](install.sh) first if you like; the sections below do the same thing by hand.
+
 ## Contents
 
+0. [Quick install](#quick-install)
 1. [Get your API key](#get-your-api-key): [sign in](#1-sign-in) · [deposit](#2-deposit-0g-tokens) · [create the key](#3-create-the-key) · [save it](#4-save-the-key-once)
 2. Set up your tool: [Kilo CLI](#kilo-cli) · [Codex CLI](#openai-codex-cli) · [Kimi Code CLI](#kimi-code-cli) · [Claude Code](#claude-code)
 3. [Troubleshooting](#troubleshooting)
@@ -138,7 +149,13 @@ In the app, switch models with `/models`. If you use Kilo's login flow instead o
 
 ## OpenAI Codex CLI
 
-Codex can use every 0G model except Claude, because Codex only speaks OpenAI's Responses format. Setting it up as a profile keeps your normal ChatGPT login as the default.
+Codex only speaks OpenAI's Responses format, and on 0G only some models support it: those with `responses` in `supported_formats`. List them with:
+
+```bash
+curl -s https://router-api.0g.ai/v1/models | python3 -c "import json,sys;print([m['id'] for m in json.load(sys.stdin)['data'] if 'responses' in m.get('supported_formats',[])])"
+```
+
+Setting it up as a profile keeps your normal ChatGPT login as the default.
 
 1. Add the provider to the end of `~/.codex/config.toml` ([`configs/codex-config.toml`](configs/codex-config.toml)):
 
@@ -154,7 +171,7 @@ Codex can use every 0G model except Claude, because Codex only speaks OpenAI's R
 
    ```toml
    model_provider = "zerog"
-   model = "glm-5.2"
+   model = "glm-5.3-flash"
    ```
 
    Recent Codex versions require profiles in separate files. A `[profiles.zerog]` table inside `config.toml` fails with "cannot be used while config.toml contains legacy profile config".
@@ -163,10 +180,12 @@ Codex can use every 0G model except Claude, because Codex only speaks OpenAI's R
 
    ```bash
    codex -p zerog
-   codex -p zerog -m kimi-k2.7-code   # any non-Claude 0G model
+   codex -p zerog -m qwen3-coder-flash   # any model from the list above
    ```
 
-Codex prints `Model metadata for glm-5.2 not found` on startup. That warning is harmless: it just uses default settings for models it doesn't know.
+Picking a model outside that list, including from Codex's own `/model` menu, fails with `not available on the responses API format`. Codex dropped support for the older chat format, so there's no workaround inside Codex; use Kilo or Kimi Code for those models.
+
+Codex prints `Model metadata for glm-5.3-flash not found` on startup. That warning is harmless: it just uses default settings for models it doesn't know.
 
 [↑ Back to contents](#contents)
 
@@ -268,6 +287,7 @@ On startup Claude Code warns that claude.ai connectors are disabled. That's expe
 | `401 api_key_revoked` | Key was revoked in the dashboard | Create a new key |
 | `Missing environment variable: ZEROG_API_KEY` | Key not in `~/.zshrc`, or terminal opened before you added it | Add the export line, then `source ~/.zshrc` or open a new terminal |
 | `model "..." is not available on the openai API format` (or `anthropic`) | The tool's format isn't one the model supports | Check `supported_formats`; for Claude use Kilo, Kimi or Claude Code |
+| `model "..." is not available on the responses API format` (Codex) | Model doesn't support the Responses format Codex needs | Use a model listing `responses`, e.g. `codex -p zerog -m glm-5.3-flash` |
 | `--profile zerog cannot be used while config.toml contains legacy ... config` | Codex profile inside `config.toml` | Move it to `~/.codex/zerog.config.toml` |
 | `The upstream provider rejected the request` (Kimi + Claude) | Kimi sends `context_management` | Add `[thinking] keep = "off"` |
 | `API Error: 400 The upstream provider rejected the request` (Claude Code) | Claude Code sends beta features 0G rejects | Set `CLAUDE_CODE_DISABLE_EXPERIMENTAL_BETAS=1` |

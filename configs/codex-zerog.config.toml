@@ -1,4 +1,4 @@
 # Save as ~/.codex/zerog.config.toml, then run: codex -p zerog
 model_provider = "zerog"
-model = "glm-5.2"
+model = "glm-5.3-flash"   # must support the Responses format; see README
 # model_reasoning_effort = "low"   # uncomment to save tokens on routine tasks
