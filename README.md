@@ -8,8 +8,8 @@ One thing to know up front: the 0G Router speaks three API formats: OpenAI Chat 
 
 | Tool | API format it speaks | Models it can use on 0G |
 | --- | --- | --- |
-| [Kilo CLI](#kilo-cli) | Both | All |
-| [Kimi Code CLI](#kimi-code-cli) | Both | All (Claude needs one extra setting) |
+| [Kilo CLI](#kilo-cli) | OpenAI Chat + Anthropic | All |
+| [Kimi Code CLI](#kimi-code-cli) | OpenAI Chat + Anthropic | All (Claude needs one extra setting) |
 | [Codex CLI](#openai-codex-cli) | OpenAI Responses | Only models listing `responses` (14 today, incl. GLM 5.3 Flash, Qwen3 Coder Flash, GPT-6.1 Sol) |
 | [Claude Code](#claude-code) | Anthropic | Claude, plus GLM 5.3, DeepSeek V4, MiMo and a few others |
 
