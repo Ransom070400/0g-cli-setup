@@ -1,12 +1,12 @@
 #!/usr/bin/env bash
-# One-command setup: point Kilo, Codex, Kimi Code and Claude Code at the 0G Router.
+# Point Kilo, Kimi Code, Codex and/or Claude Code at the 0G Router.
 #   curl -fsSL https://raw.githubusercontent.com/Ransom070400/0g-cli-setup/main/install.sh | bash
+# Asks which tools to set up, then for your API key.
+# Non-interactive: ZEROG_API_KEY=sk-... bash install.sh --tools kilo,codex   (or --tools all)
 # Safe to re-run: it replaces its own blocks and backs up every file it touches.
 set -euo pipefail
 
 API="https://router-api.0g.ai"
-MARK_BEGIN="# >>> 0g-cli-setup >>>"
-MARK_END="# <<< 0g-cli-setup <<<"
 STAMP="$(date +%Y%m%d-%H%M%S)"
 
 say()  { printf '\033[1;36m==>\033[0m %s\n' "$*"; }
@@ -14,10 +14,69 @@ ok()   { printf '\033[1;32m  ✓\033[0m %s\n' "$*"; }
 warn() { printf '\033[1;33m  !\033[0m %s\n' "$*"; }
 die()  { printf '\033[1;31merror:\033[0m %s\n' "$*" >&2; exit 1; }
 
-backup() { [ -f "$1" ] && cp "$1" "$1.bak-$STAMP" && ok "backed up $1 → $1.bak-$STAMP" || true; }
+backup() { [ -f "$1" ] && cp "$1" "$1.bak-$STAMP" && ok "backed up $1" || true; }
+ask()    { [ -r /dev/tty ] || die "no terminal to ask on; use --tools and ZEROG_API_KEY"; read -r "$@" </dev/tty; }
 
 command -v curl >/dev/null || die "curl is required"
 command -v python3 >/dev/null || die "python3 is required (macOS: xcode-select --install)"
+
+# --- arguments ---------------------------------------------------------------
+TOOLS_ARG=""
+while [ $# -gt 0 ]; do
+  case "$1" in
+    --tools) TOOLS_ARG="${2:-}"; shift 2 ;;
+    --tools=*) TOOLS_ARG="${1#*=}"; shift ;;
+    -h|--help) sed -n '2,6p' "$0" | sed 's/^# \{0,1\}//'; exit 0 ;;
+    *) die "unknown option: $1" ;;
+  esac
+done
+
+# --- pick tools --------------------------------------------------------------
+IDS=(kilo kimi codex claude)
+NAMES=("Kilo CLI" "Kimi Code CLI" "Codex CLI" "Claude Code")
+BINS=(kilo kimi codex claude)
+NOTES=("all models" "all models" "only models with the Responses format" "Claude + a few others")
+
+installed() { command -v "$1" >/dev/null; }
+
+SELECTED=()
+if [ -n "$TOOLS_ARG" ]; then
+  if [ "$TOOLS_ARG" = all ]; then SELECTED=("${IDS[@]}")
+  else IFS=, read -ra SELECTED <<<"$TOOLS_ARG"; fi
+  for t in "${SELECTED[@]}"; do
+    case " ${IDS[*]} " in *" $t "*) ;; *) die "unknown tool '$t' (choose from: ${IDS[*]}, all)";; esac
+  done
+else
+  echo
+  printf '\033[1m0G Router setup\033[0m: which tools do you want to use with 0G?\n\n'
+  for i in "${!IDS[@]}"; do
+    if installed "${BINS[$i]}"; then st=$'\033[32minstalled\033[0m'; else st=$'\033[2mnot installed\033[0m'; fi
+    printf '  %d) %-14s %-24s %s\n' "$((i+1))" "${NAMES[$i]}" "$st" "${NOTES[$i]}"
+  done
+  echo "  a) All of the above"
+  echo
+  while :; do
+    printf 'Pick one or more (e.g. 1 or 1,3): '; ask CHOICE
+    CHOICE="${CHOICE// /}"; SELECTED=()
+    if [ "$CHOICE" = a ] || [ "$CHOICE" = A ]; then SELECTED=("${IDS[@]}"); break; fi
+    valid=1
+    IFS=, read -ra picks <<<"$CHOICE"
+    for p in "${picks[@]}"; do
+      if [[ "$p" =~ ^[1-4]$ ]]; then
+        t="${IDS[$((p-1))]}"
+        case " ${SELECTED[*]:-} " in *" $t "*) ;; *) SELECTED+=("$t");; esac
+      else valid=0; fi
+    done
+    [ "$valid" = 1 ] && [ ${#SELECTED[@]} -gt 0 ] && break
+    warn "type numbers 1-4 separated by commas, or a"
+  done
+fi
+
+picked_names=()
+for t in "${SELECTED[@]}"; do
+  for i in "${!IDS[@]}"; do [ "${IDS[$i]}" = "$t" ] && picked_names+=("${NAMES[$i]}"); done
+done
+ok "setting up: $(IFS=,; echo "${picked_names[*]}" | sed 's/,/, /g')"
 
 # --- shell rc file -----------------------------------------------------------
 case "$(basename "${SHELL:-}")" in
@@ -27,15 +86,16 @@ case "$(basename "${SHELL:-}")" in
 esac
 
 # --- API key -----------------------------------------------------------------
+echo
 say "0G API key"
 KEY="${ZEROG_API_KEY:-}"
 if [ -n "$KEY" ]; then
   ok "using ZEROG_API_KEY from your environment"
 else
-  [ -r /dev/tty ] || die "no terminal to read the key from; run: ZEROG_API_KEY=sk-... bash install.sh"
-  printf '  Paste your key from pc.0g.ai (starts with sk-, input hidden): '
-  read -rs KEY </dev/tty; echo
+  echo "  No key yet? Get one at https://pc.0g.ai (sign in → Deposit → API Keys → Create)."
+  printf '  Paste your key (starts with sk-, input hidden): '; ask -s KEY; echo
 fi
+KEY="${KEY//[[:space:]]/}"
 case "$KEY" in sk-*) ;; *) die "that doesn't look like a 0G key (should start with sk-)";; esac
 
 code=$(curl -s -o /dev/null -w '%{http_code}' -m 60 "$API/v1/chat/completions" \
@@ -49,16 +109,16 @@ case "$code" in
 esac
 
 # --- model list --------------------------------------------------------------
-say "Fetching 0G model list"
 MODELS_JSON="$(mktemp)"; trap 'rm -f "$MODELS_JSON"' EXIT
 curl -fsS -m 30 "$API/v1/models" -o "$MODELS_JSON" || die "couldn't fetch $API/v1/models"
-ok "$(python3 -c 'import json,sys;print(len(json.load(open(sys.argv[1]))["data"]))' "$MODELS_JSON") models available"
+ok "$(python3 -c 'import json,sys;print(len(json.load(open(sys.argv[1]))["data"]))' "$MODELS_JSON") models available on 0G"
 
-# Writes a marker-delimited block into a file, replacing any earlier one.
-write_block() { # file, content
-  python3 - "$1" "$2" "$MARK_BEGIN" "$MARK_END" <<'PY'
+# Writes a named, marker-delimited block into a file, replacing any earlier one.
+write_block() { # file, name, content
+  python3 - "$1" "$2" "$3" <<'PY'
 import os,re,sys
-path,content,b,e=sys.argv[1:5]
+path,name,content=sys.argv[1:4]
+b,e=f"# >>> {name} >>>",f"# <<< {name} <<<"
 s=open(path).read() if os.path.exists(path) else ""
 block=f"{b}\n{content.rstrip()}\n{e}\n"
 pat=re.compile(re.escape(b)+r".*?"+re.escape(e)+r"\n?",re.S)
@@ -67,34 +127,20 @@ open(path,"w").write(s)
 PY
 }
 
-# --- key + claude-0g in shell rc --------------------------------------------
+echo
 say "Saving key to $RC"
-backup "$RC"
-RC_BLOCK="export ZEROG_API_KEY='$KEY'"
-if command -v claude >/dev/null; then
-  RC_BLOCK="$RC_BLOCK
-# Claude Code on 0G; plain \`claude\` keeps your normal login
-claude-0g() {
-  CLAUDE_CODE_DISABLE_EXPERIMENTAL_BETAS=1 \\
-  ANTHROPIC_BASE_URL=\"$API\" \\
-  ANTHROPIC_AUTH_TOKEN=\"\$ZEROG_API_KEY\" \\
-  ANTHROPIC_API_KEY=\"\" \\
-  ANTHROPIC_MODEL=\"claude-sonnet-5\" \\
-  ANTHROPIC_DEFAULT_OPUS_MODEL=\"claude-opus-5.5\" \\
-  ANTHROPIC_DEFAULT_SONNET_MODEL=\"claude-sonnet-5\" \\
-  ANTHROPIC_DEFAULT_HAIKU_MODEL=\"claude-sonnet-4.5\" \\
-  claude \"\$@\"
-}"
-fi
-touch "$RC"; write_block "$RC" "$RC_BLOCK"; chmod 600 "$RC"
+backup "$RC"; touch "$RC"
+write_block "$RC" "0g-cli-setup" "export ZEROG_API_KEY='$KEY'"
+chmod 600 "$RC"
 ok "ZEROG_API_KEY saved"
 
 DONE=()
+not_installed_note() { installed "$1" || warn "$2 isn't installed yet; config is ready for when it is"; }
 
 # --- Kilo --------------------------------------------------------------------
-if command -v kilo >/dev/null; then
-  say "Kilo CLI"
-  F="$HOME/.config/kilo/kilo.jsonc"; mkdir -p "$(dirname "$F")"; backup "$F"
+setup_kilo() {
+  say "Kilo CLI"; not_installed_note kilo "Kilo CLI"
+  local F="$HOME/.config/kilo/kilo.jsonc"; mkdir -p "$(dirname "$F")"; backup "$F"
   python3 - "$F" "$MODELS_JSON" "$API" <<'PY'
 import json,os,re,sys
 path,models,api=sys.argv[1:4]
@@ -109,8 +155,7 @@ for m in json.load(open(models))["data"]:
     i,c=m["id"],m.get("context_length")
     if not c or skip.search(i): continue
     entry={"name":m.get("name") or i,"limit":{"context":c,"output":min(32768,c//4)}}
-    fm=m.get("supported_formats") or ["openai"]
-    (oa if "openai" in fm else an)[i]=entry
+    (oa if "openai" in (m.get("supported_formats") or ["openai"]) else an)[i]=entry
 key={"apiKey":"{env:ZEROG_API_KEY}"}
 p=cfg.setdefault("provider",{})
 p["zerog"]={"npm":"@ai-sdk/openai-compatible","name":"0G Router","options":{"baseURL":api+"/v1",**key},"models":oa}
@@ -119,58 +164,23 @@ cfg.setdefault("model","zerog/glm-5.2")
 json.dump(cfg,open(path,"w"),indent=2)
 print(f"  ✓ {len(oa)} models under zerog/, {len(an)} under zerog-claude/")
 PY
-  DONE+=("kilo                      Kilo on 0G (zerog/glm-5.2 unless you had a default)")
-fi
-
-# --- Codex -------------------------------------------------------------------
-if command -v codex >/dev/null; then
-  say "Codex CLI"
-  mkdir -p "$HOME/.codex"
-  F="$HOME/.codex/config.toml"; backup "$F"; touch "$F"
-  if grep -q '^\[profiles\.zerog\]' "$F"; then
-    warn "found a legacy [profiles.zerog] table in $F; remove it or Codex will refuse -p zerog"
-  fi
-  if grep -q '^\[model_providers\.zerog\]' "$F" && ! grep -qF "$MARK_BEGIN" "$F"; then
-    warn "$F already defines [model_providers.zerog]; left it as is"
-  else
-    write_block "$F" "[model_providers.zerog]
-name = \"0G Router\"
-base_url = \"$API/v1\"
-env_key = \"ZEROG_API_KEY\"
-wire_api = \"responses\""
-  fi
-  # Codex only speaks the Responses API, which a subset of 0G models support
-  RESP="$(python3 -c '
-import json,sys
-print(" ".join(m["id"] for m in json.load(open(sys.argv[1]))["data"] if "responses" in (m.get("supported_formats") or [])))' "$MODELS_JSON")"
-  CODEX_MODEL=""
-  for m in glm-5.3-flash qwen3-coder-flash deepseek-v4-flash $RESP; do
-    case " $RESP " in *" $m "*) CODEX_MODEL="$m"; break ;; esac
-  done
-  if [ -z "$CODEX_MODEL" ]; then
-    warn "no 0G model currently supports the Responses API Codex needs; skipped the profile"
-  else
-    P="$HOME/.codex/zerog.config.toml"; backup "$P"
-    printf 'model_provider = "zerog"\nmodel = "%s"\n' "$CODEX_MODEL" > "$P"
-    ok "provider + zerog profile written (default model: $CODEX_MODEL)"
-    ok "models Codex can use: $RESP"
-    DONE+=("codex -p zerog            Codex on 0G ($CODEX_MODEL; others listed above, via -m)")
-  fi
-fi
+  DONE+=("kilo                 Kilo on 0G (/models to switch)")
+}
 
 # --- Kimi Code ---------------------------------------------------------------
-if command -v kimi >/dev/null; then
-  say "Kimi Code CLI"
-  F="$HOME/.kimi-code/config.toml"; mkdir -p "$(dirname "$F")"; backup "$F"; touch "$F"
-  BLOCK="$(python3 - "$F" "$MODELS_JSON" "$API" "$MARK_BEGIN" "$MARK_END" <<'PY'
+setup_kimi() {
+  say "Kimi Code CLI"; not_installed_note kimi "Kimi Code CLI"
+  local F="$HOME/.kimi-code/config.toml"; mkdir -p "$(dirname "$F")"; backup "$F"; touch "$F"
+  local BLOCK
+  BLOCK="$(python3 - "$F" "$MODELS_JSON" "$API" <<'PY'
 import json,re,sys
-path,models,api,b,e=sys.argv[1:6]
-s=re.sub(re.escape(b)+r".*?"+re.escape(e),"",open(path).read(),flags=re.S)
+path,models,api=sys.argv[1:4]
+s=re.sub(r"# >>> 0g-cli-setup >>>.*?# <<< 0g-cli-setup <<<","",open(path).read(),flags=re.S)
 out=[]
 if not re.search(r"^\[thinking\]",s,re.M):
     out+=["# 0G rejects Anthropic context_management, which Kimi sends unless keep is off","[thinking]",'keep = "off"',""]
 else:
-    print("  ! [thinking] already set; make sure it has keep = \"off\" or Claude will fail",file=sys.stderr)
+    print('  ! [thinking] already set; make sure it has keep = "off" or Claude will fail',file=sys.stderr)
 out+=["[providers.zerog]",'type = "openai"',f'base_url = "{api}/v1"','api_key_env = "ZEROG_API_KEY"',"",
       "[providers.zerog-claude]",'type = "anthropic"',f'base_url = "{api}"','api_key_env = "ZEROG_API_KEY"',""]
 skip=re.compile(r"^(bytedance/|tencent/)|image|embedding|whisper|ocr|^laya$|^minimax-h3$")
@@ -182,25 +192,74 @@ for m in json.load(open(models))["data"]:
 print("\n".join(out))
 PY
 )"
-  write_block "$F" "$BLOCK"
+  write_block "$F" "0g-cli-setup" "$BLOCK"
   # default_model must sit above every table
   if ! grep -q '^default_model' "$F"; then
     printf 'default_model = "kimi-k2.7-code"\n\n%s\n' "$(cat "$F")" > "$F"
   fi
   ok "providers + models written"
-  DONE+=("kimi                      Kimi Code on 0G (kimi -m claude-sonnet-5 for Claude)")
-fi
+  DONE+=("kimi                 Kimi Code on 0G (kimi -m claude-sonnet-5 for Claude)")
+}
 
-if command -v claude >/dev/null; then
-  DONE+=("claude-0g                 Claude Code on 0G (plain claude is unchanged)")
-fi
+# --- Codex -------------------------------------------------------------------
+setup_codex() {
+  say "Codex CLI"; not_installed_note codex "Codex CLI"
+  mkdir -p "$HOME/.codex"
+  local F="$HOME/.codex/config.toml"; backup "$F"; touch "$F"
+  if grep -q '^\[profiles\.zerog\]' "$F"; then
+    warn "found a legacy [profiles.zerog] table in $F; remove it or Codex will refuse -p zerog"
+  fi
+  if grep -q '^\[model_providers\.zerog\]' "$F" && ! grep -q '# >>> 0g-cli-setup >>>' "$F"; then
+    warn "$F already defines [model_providers.zerog]; left it as is"
+  else
+    write_block "$F" "0g-cli-setup" "[model_providers.zerog]
+name = \"0G Router\"
+base_url = \"$API/v1\"
+env_key = \"ZEROG_API_KEY\"
+wire_api = \"responses\""
+  fi
+  # Codex only speaks the Responses API, which a subset of 0G models support
+  local RESP CODEX_MODEL="" m
+  RESP="$(python3 -c '
+import json,sys
+print(" ".join(m["id"] for m in json.load(open(sys.argv[1]))["data"] if "responses" in (m.get("supported_formats") or [])))' "$MODELS_JSON")"
+  for m in glm-5.3-flash qwen3-coder-flash deepseek-v4-flash $RESP; do
+    case " $RESP " in *" $m "*) CODEX_MODEL="$m"; break ;; esac
+  done
+  if [ -z "$CODEX_MODEL" ]; then
+    warn "no 0G model currently supports the Responses API Codex needs; skipped the profile"
+    return
+  fi
+  local P="$HOME/.codex/zerog.config.toml"; backup "$P"
+  printf 'model_provider = "zerog"\nmodel = "%s"\n' "$CODEX_MODEL" > "$P"
+  ok "provider + zerog profile written (default model: $CODEX_MODEL)"
+  ok "models Codex can use: $RESP"
+  DONE+=("codex -p zerog       Codex on 0G ($CODEX_MODEL; others above via -m)")
+}
+
+# --- Claude Code -------------------------------------------------------------
+setup_claude() {
+  say "Claude Code"; not_installed_note claude "Claude Code"
+  write_block "$RC" "0g-cli-setup claude" "# Claude Code on 0G; plain \`claude\` keeps your normal login
+claude-0g() {
+  CLAUDE_CODE_DISABLE_EXPERIMENTAL_BETAS=1 \\
+  ANTHROPIC_BASE_URL=\"$API\" \\
+  ANTHROPIC_AUTH_TOKEN=\"\$ZEROG_API_KEY\" \\
+  ANTHROPIC_API_KEY=\"\" \\
+  ANTHROPIC_MODEL=\"claude-sonnet-5\" \\
+  ANTHROPIC_DEFAULT_OPUS_MODEL=\"claude-opus-5.5\" \\
+  ANTHROPIC_DEFAULT_SONNET_MODEL=\"claude-sonnet-5\" \\
+  ANTHROPIC_DEFAULT_HAIKU_MODEL=\"claude-sonnet-4.5\" \\
+  claude \"\$@\"
+}"
+  ok "claude-0g command added to $RC"
+  DONE+=("claude-0g            Claude Code on 0G (plain claude is unchanged)")
+}
+
+for t in "${SELECTED[@]}"; do echo; "setup_$t"; done
 
 # --- summary -----------------------------------------------------------------
 echo
-if [ ${#DONE[@]} -eq 0 ]; then
-  warn "none of kilo, codex, kimi or claude are installed; only the key was saved"
-else
-  say "Done. Open a new terminal (or run: source $RC), then:"
-  for l in "${DONE[@]}"; do printf '    %s\n' "$l"; done
-fi
+say "Done. Open a new terminal (or run: source $RC), then:"
+for l in "${DONE[@]:-}"; do [ -n "$l" ] && printf '    %s\n' "$l"; done
 echo "    Backups: *.bak-$STAMP next to each changed file"

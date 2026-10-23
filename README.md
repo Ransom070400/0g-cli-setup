@@ -17,13 +17,39 @@ To check a model's formats, look at `supported_formats` in `curl https://router-
 
 ## Quick install
 
-Already have a funded key? One command sets up every supported tool you have installed:
+Already have a funded key? Run one command:
 
 ```bash
 curl -fsSL https://raw.githubusercontent.com/Ransom070400/0g-cli-setup/main/install.sh | bash
 ```
 
-It asks for your key (hidden as you type), checks it works, saves it to your shell config, and configures Kilo, Codex, Kimi Code and Claude Code with 0G's live model list. It backs up every file it changes and is safe to run again. Read [`install.sh`](install.sh) first if you like; the sections below do the same thing by hand.
+It walks you through it:
+
+```text
+0G Router setup: which tools do you want to use with 0G?
+
+  1) Kilo CLI       installed       all models
+  2) Kimi Code CLI  installed       all models
+  3) Codex CLI      installed       only models with the Responses format
+  4) Claude Code    installed       Claude + a few others
+  a) All of the above
+
+Pick one or more (e.g. 1 or 1,3): 1,3
+
+==> 0G API key
+  Paste your key (starts with sk-, input hidden):
+  ✓ key works
+```
+
+Then it saves the key to your shell config and configures the tools you picked with 0G's live model list. It backs up every file it changes and is safe to run again, for example to add another tool later.
+
+To skip the questions (for scripts or CI):
+
+```bash
+curl -fsSL https://raw.githubusercontent.com/Ransom070400/0g-cli-setup/main/install.sh | ZEROG_API_KEY=sk-... bash -s -- --tools kilo,codex
+```
+
+`--tools` takes any of `kilo`, `kimi`, `codex`, `claude`, or `all`. Read [`install.sh`](install.sh) first if you like; the sections below do the same thing by hand.
 
 ## Contents
 
