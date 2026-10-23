@@ -27,20 +27,41 @@ curl -fsSL https://raw.githubusercontent.com/Ransom070400/0g-cli-setup/main/inst
 It walks you through it:
 
 ```text
-0G Router setup: which tools do you want to use with 0G?
+   ██████╗  ██████╗
+  ██╔═████╗██╔════╝
+  ██║██╔██║██║  ███╗   0G CLI setup
+  ████╔╝██║██║   ██║   One key. 100+ models. Your terminal.
+  ╚██████╔╝╚██████╔╝
+   ╚═════╝  ╚═════╝
 
-  1) Kilo CLI       installed       all models
-  2) OpenCode       installed       all models
-  3) Kimi Code CLI  installed       all models
-  4) Codex CLI      installed       only models with the Responses format
-  5) Claude Code    installed       Claude + a few others
-  a) All of the above
+[1/3] Choose your tools
 
-Pick one or more (e.g. 1 or 1,3): 1,4
+   1  ● Kilo CLI       installed      all models
+   2  ● OpenCode       installed      all models
+   3  ● Kimi Code CLI  installed      all models
+   4  ● Codex CLI      installed      Responses-format models
+   5  ● Claude Code    installed      Claude + a few others
+   a    All of the above
 
-==> 0G API key
-  Paste your key (starts with sk-, input hidden):
-  ✓ key works
+  › Pick one or more (e.g. 1 or 1,3): 1,4
+
+[2/3] Connect your 0G API key
+  › Paste your key (starts with sk-, input hidden):
+  ✓ Key works
+
+[3/3] Configure
+  ...
+
+  ╭────────────────────────────────────────────────────────────
+  │  ✓ Installation complete
+  │
+  │  You can now run:
+  │
+  │    kilo             Kilo on 0G · /models to switch
+  │    codex -p zerog   Codex on 0G · glm-5.3-flash, or -m <model>
+  │
+  │  First, open a new terminal or run: source ~/.zshrc
+  ╰────────────────────────────────────────────────────────────
 ```
 
 If you already have a key saved from an earlier run, it shows the last four characters and asks whether to use it. Answer `n` to enter a different key, which replaces the saved one.
