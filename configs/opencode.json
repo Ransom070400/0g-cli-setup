@@ -1,0 +1,30 @@
+{
+  "$schema": "https://opencode.ai/config.json",
+  "model": "zerog/glm-5.2",
+  "provider": {
+    "zerog": {
+      "npm": "@ai-sdk/openai-compatible",
+      "name": "0G Router",
+      "options": {
+        "baseURL": "https://router-api.0g.ai/v1",
+        "apiKey": "{env:ZEROG_API_KEY}"
+      },
+      "models": {
+        "glm-5.2": { "limit": { "context": 1179648, "output": 32768 } },
+        "kimi-k2.7-code": { "limit": { "context": 262144, "output": 32768 } },
+        "deepseek-v4-pro": { "limit": { "context": 1441792, "output": 32768 } }
+      }
+    },
+    "zerog-claude": {
+      "npm": "@ai-sdk/anthropic",
+      "name": "0G Router (Claude)",
+      "options": {
+        "baseURL": "https://router-api.0g.ai/v1",
+        "apiKey": "{env:ZEROG_API_KEY}"
+      },
+      "models": {
+        "claude-sonnet-5": { "limit": { "context": 1000000, "output": 32768 } }
+      }
+    }
+  }
+}

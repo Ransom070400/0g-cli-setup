@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-# Point Kilo, Kimi Code, Codex and/or Claude Code at the 0G Router.
+# Point Kilo, OpenCode, Kimi Code, Codex and/or Claude Code at the 0G Router.
 #   curl -fsSL https://raw.githubusercontent.com/Ransom070400/0g-cli-setup/main/install.sh | bash
 # Asks which tools to set up, then for your API key.
 # Non-interactive: ZEROG_API_KEY=sk-... bash install.sh --tools kilo,codex   (or --tools all)
@@ -32,10 +32,10 @@ while [ $# -gt 0 ]; do
 done
 
 # --- pick tools --------------------------------------------------------------
-IDS=(kilo kimi codex claude)
-NAMES=("Kilo CLI" "Kimi Code CLI" "Codex CLI" "Claude Code")
-BINS=(kilo kimi codex claude)
-NOTES=("all models" "all models" "only models with the Responses format" "Claude + a few others")
+IDS=(kilo opencode kimi codex claude)
+NAMES=("Kilo CLI" "OpenCode" "Kimi Code CLI" "Codex CLI" "Claude Code")
+BINS=(kilo opencode kimi codex claude)
+NOTES=("all models" "all models" "all models" "only models with the Responses format" "Claude + a few others")
 
 installed() { command -v "$1" >/dev/null; }
 
@@ -62,13 +62,13 @@ else
     valid=1
     IFS=, read -ra picks <<<"$CHOICE"
     for p in "${picks[@]}"; do
-      if [[ "$p" =~ ^[1-4]$ ]]; then
+      if [[ "$p" =~ ^[1-5]$ ]]; then
         t="${IDS[$((p-1))]}"
         case " ${SELECTED[*]:-} " in *" $t "*) ;; *) SELECTED+=("$t");; esac
       else valid=0; fi
     done
     [ "$valid" = 1 ] && [ ${#SELECTED[@]} -gt 0 ] && break
-    warn "type numbers 1-4 separated by commas, or a"
+    warn "type numbers 1-5 separated by commas, or a"
   done
 fi
 
@@ -138,13 +138,13 @@ DONE=()
 not_installed_note() { installed "$1" || warn "$2 isn't installed yet; config is ready for when it is"; }
 
 # --- Kilo --------------------------------------------------------------------
-setup_kilo() {
-  say "Kilo CLI"; not_installed_note kilo "Kilo CLI"
-  local F="$HOME/.config/kilo/kilo.jsonc"; mkdir -p "$(dirname "$F")"; backup "$F"
-  python3 - "$F" "$MODELS_JSON" "$API" <<'PY'
+# Kilo is built on OpenCode, so both share this config format.
+write_opencode_style() { # file, schema url
+  local F="$1"; mkdir -p "$(dirname "$F")"; backup "$F"
+  python3 - "$F" "$MODELS_JSON" "$API" "$2" <<'PY'
 import json,os,re,sys
-path,models,api=sys.argv[1:4]
-cfg={"$schema":"https://app.kilo.ai/config.json"}
+path,models,api,schema=sys.argv[1:5]
+cfg={"$schema":schema}
 if os.path.exists(path):
     raw=re.sub(r"^\s*//.*$","",open(path).read(),flags=re.M)
     try: cfg=json.loads(raw) if raw.strip() else cfg
@@ -164,7 +164,23 @@ cfg.setdefault("model","zerog/glm-5.2")
 json.dump(cfg,open(path,"w"),indent=2)
 print(f"  ✓ {len(oa)} models under zerog/, {len(an)} under zerog-claude/")
 PY
+}
+
+setup_kilo() {
+  say "Kilo CLI"; not_installed_note kilo "Kilo CLI"
+  write_opencode_style "$HOME/.config/kilo/kilo.jsonc" "https://app.kilo.ai/config.json"
   DONE+=("kilo                 Kilo on 0G (/models to switch)")
+}
+
+# --- OpenCode ----------------------------------------------------------------
+setup_opencode() {
+  say "OpenCode"; not_installed_note opencode "OpenCode"
+  local D="$HOME/.config/opencode" F
+  if [ -f "$D/opencode.json" ]; then F="$D/opencode.json"
+  elif [ -f "$D/opencode.jsonc" ]; then F="$D/opencode.jsonc"
+  else F="$D/opencode.json"; fi
+  write_opencode_style "$F" "https://opencode.ai/config.json"
+  DONE+=("opencode             OpenCode on 0G (/models to switch)")
 }
 
 # --- Kimi Code ---------------------------------------------------------------
