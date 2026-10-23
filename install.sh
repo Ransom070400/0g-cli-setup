@@ -1,6 +1,6 @@
 #!/usr/bin/env bash
 # One-command setup: point Kilo, Codex, Kimi Code and Claude Code at the 0G Router.
-#   curl -fsSL https://raw.githubusercontent.com/<you>/0g-cli-setup/main/install.sh | bash
+#   curl -fsSL https://raw.githubusercontent.com/Ransom070400/0g-cli-setup/main/install.sh | bash
 # Safe to re-run: it replaces its own blocks and backs up every file it touches.
 set -euo pipefail
 

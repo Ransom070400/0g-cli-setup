@@ -20,7 +20,7 @@ To check a model's formats, look at `supported_formats` in `curl https://router-
 Already have a funded key? One command sets up every supported tool you have installed:
 
 ```bash
-curl -fsSL https://raw.githubusercontent.com/<you>/0g-cli-setup/main/install.sh | bash
+curl -fsSL https://raw.githubusercontent.com/Ransom070400/0g-cli-setup/main/install.sh | bash
 ```
 
 It asks for your key (hidden as you type), checks it works, saves it to your shell config, and configures Kilo, Codex, Kimi Code and Claude Code with 0G's live model list. It backs up every file it changes and is safe to run again. Read [`install.sh`](install.sh) first if you like; the sections below do the same thing by hand.
