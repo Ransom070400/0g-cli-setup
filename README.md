@@ -43,6 +43,8 @@ Pick one or more (e.g. 1 or 1,3): 1,4
   ✓ key works
 ```
 
+If you already have a key saved from an earlier run, it shows the last four characters and asks whether to use it. Answer `n` to enter a different key, which replaces the saved one.
+
 Then it saves the key to your shell config and configures the tools you picked with 0G's live model list. It backs up every file it changes and is safe to run again, for example to add another tool later.
 
 To skip the questions (for scripts or CI):

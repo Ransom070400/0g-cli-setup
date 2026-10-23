@@ -89,10 +89,19 @@ esac
 echo
 say "0G API key"
 KEY="${ZEROG_API_KEY:-}"
+if [ -n "$KEY" ] && [ -z "$TOOLS_ARG" ] && [ -r /dev/tty ]; then
+  printf '  Found a key in your environment (sk-...%s). Use it? [Y/n]: ' "${KEY: -4}"
+  ask USE_ENV
+  case "$USE_ENV" in n|N|no|No|NO) KEY="" ;; esac
+fi
 if [ -n "$KEY" ]; then
   ok "using ZEROG_API_KEY from your environment"
 else
-  echo "  No key yet? Get one at https://pc.0g.ai (sign in → Deposit → API Keys → Create)."
+  if [ -n "${ZEROG_API_KEY:-}" ]; then
+    echo "  OK, enter the key you want to use instead. It replaces the saved one."
+  else
+    echo "  No key yet? Get one at https://pc.0g.ai (sign in → Deposit → API Keys → Create)."
+  fi
   printf '  Paste your key (starts with sk-, input hidden): '; ask -s KEY; echo
 fi
 KEY="${KEY//[[:space:]]/}"
