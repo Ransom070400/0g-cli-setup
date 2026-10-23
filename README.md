@@ -1,10 +1,19 @@
-# Using the 0G API from your terminal: Kilo, OpenCode, Codex, Kimi Code and Claude Code
+# Use the 0G API from your terminal
 
-One 0G API key gives your coding CLIs access to 100+ models (Claude, GPT, Gemini, GLM, Kimi, Qwen, DeepSeek and more) through a single endpoint: `https://router-api.0g.ai/v1`.
+**One 0G API key, 100+ models (Claude, GPT, Gemini, GLM, Kimi, Qwen, DeepSeek and more), in the coding agents you already use: Kilo, OpenCode, Kimi Code, Codex and Claude Code.**
 
-This guide covers getting a funded API key, then setting up five terminal coding agents to use it: **Kilo CLI**, **OpenCode**, **OpenAI Codex CLI**, **Kimi Code CLI** and **Claude Code**. Every config below was tested end to end on macOS with zsh. Ready-to-copy files are in [`configs/`](configs/).
+Setup takes two steps:
 
-One thing to know up front: the 0G Router speaks three API formats: OpenAI Chat Completions, OpenAI Responses and Anthropic Messages. Each model supports some of them, and that decides which tools can use it:
+1. **[Get a funded API key](#step-1-get-your-api-key)** at pc.0g.ai (a few minutes, once).
+2. **Connect your tools**, either way:
+   - **[Option A: the install script](#option-a-install-with-the-script)**: one command; it asks which tools you want and does the rest.
+   - **[Option B: by hand](#option-b-set-up-manually)**: copy the config for each tool yourself.
+
+Everything here was tested end to end on macOS with zsh. Ready-to-copy config files are in [`configs/`](configs/).
+
+## Which tools can use which models
+
+The 0G Router speaks three API formats: OpenAI Chat Completions, OpenAI Responses and Anthropic Messages. Each model supports some of them, and that decides which tools can use it:
 
 | Tool | API format it speaks | Models it can use on 0G |
 | --- | --- | --- |
@@ -16,15 +25,69 @@ One thing to know up front: the 0G Router speaks three API formats: OpenAI Chat 
 
 To check a model's formats, look at `supported_formats` in `curl https://router-api.0g.ai/v1/models`.
 
-## Quick install
+## Contents
 
-Already have a funded key? Run one command:
+1. [Step 1: Get your API key](#step-1-get-your-api-key): [sign in](#1-sign-in) · [deposit](#2-deposit-0g-tokens) · [create the key](#3-create-the-key)
+2. [Step 2: Connect your tools](#step-2-connect-your-tools)
+   - [Option A: Install with the script](#option-a-install-with-the-script)
+   - [Option B: Set up manually](#option-b-set-up-manually): [save your key](#save-your-key) · [Kilo CLI](#kilo-cli) · [OpenCode](#opencode) · [Kimi Code CLI](#kimi-code-cli) · [Codex CLI](#openai-codex-cli) · [Claude Code](#claude-code)
+3. [Troubleshooting](#troubleshooting)
+4. [Saving tokens](#saving-tokens)
+5. [Sources](#sources)
+
+## Step 1: Get your API key
+
+You need three things before any tool will work: a 0G account, a deposit of 0G tokens, and an API key. Both setup options need this.
+
+### 1. Sign in
+
+Go to [pc.0g.ai](https://pc.0g.ai) and click **Get API Key**. You can sign in two ways:
+
+- **With a crypto wallet**: MetaMask or WalletConnect.
+- **With a social account**: Google, X, Discord or TikTok. This creates a wallet for you automatically, so you don't need one already.
+
+### 2. Deposit 0G tokens
+
+The Router is pay-as-you-go: there's no subscription, and each request is paid from a balance you deposit up front.
+
+1. Open **Dashboard → Deposit**.
+2. Enter an amount of 0G tokens and confirm the transaction in your wallet. It's a normal on-chain transaction.
+3. The balance is usable a few seconds after the transaction confirms.
+
+Use **mainnet** for real work. Mainnet and testnet have separate balances and separate API keys, so a key made on one won't spend tokens deposited on the other.
+
+You need 0G tokens in your wallet on 0G mainnet before you can deposit. The docs don't state a minimum deposit amount.
+
+### 3. Create the key
+
+1. Open **Dashboard → API Keys** and click **Create**.
+2. Copy the key right away. It starts with `sk-`, and **0G never shows it again**. If you lose it, create a new one.
+
+Keep the key out of code, screenshots and git repos. Anyone with it can spend your balance.
+
+Note that pc.0g.ai is the dashboard, not the API. Every tool points at `router-api.0g.ai`.
+
+[↑ Back to contents](#contents)
+
+## Step 2: Connect your tools
+
+Pick one option. Both end in the same place: your key saved as `ZEROG_API_KEY`, and each tool configured to use 0G.
+
+| | Option A: script | Option B: manual |
+| --- | --- | --- |
+| Time | About a minute | About five minutes per tool |
+| Models added | Every 0G model, from the live list | The few in the example configs, plus any you add |
+| Best for | Getting started fast | Seeing exactly what changes, or custom setups |
+
+### Option A: Install with the script
+
+Run this in your terminal:
 
 ```bash
 curl -fsSL https://raw.githubusercontent.com/Ransom070400/0g-cli-setup/main/install.sh | bash
 ```
 
-It walks you through it:
+It walks you through three steps:
 
 ```text
    ██████╗  ██████╗
@@ -64,60 +127,36 @@ It walks you through it:
   ╰────────────────────────────────────────────────────────────
 ```
 
-If you already have a key saved from an earlier run, it shows the last four characters and asks whether to use it. Answer `n` to enter a different key, which replaces the saved one.
+What it does:
 
-Then it saves the key to your shell config and configures the tools you picked with 0G's live model list. It backs up every file it changes and is safe to run again, for example to add another tool later.
+- **Asks which tools to set up**, marking which ones you have installed. Pick one (`1`), several (`1,4`) or all (`a`).
+- **Asks for your key** (hidden as you type) and checks it with 0G. If you already have a key saved from an earlier run, it shows the last four characters and asks whether to use it; answer `n` to replace it.
+- **Configures each tool** with 0G's live model list, and saves the key to your shell config (`~/.zshrc` on most Macs).
+- **Ends with the commands to run**, like `kilo`, `codex -p zerog` or `claude-0g`.
 
-To skip the questions (for scripts or CI):
+Open a new terminal afterwards (or run `source ~/.zshrc`) so the key is loaded.
+
+**Safe to re-run.** Run it again to add another tool, change your key, or pick up new 0G models. It replaces its own changes instead of duplicating them, and leaves the rest of your config alone.
+
+**Backups.** Before changing any file, it saves a copy next to it as `<file>.bak-<date-time>`. To undo, restore that copy. Everything it adds to `~/.zshrc` and TOML configs sits between `# >>> 0g-cli-setup >>>` and `# <<< 0g-cli-setup <<<` lines, so it's easy to find and delete.
+
+**No prompts (for scripts or CI):**
 
 ```bash
 curl -fsSL https://raw.githubusercontent.com/Ransom070400/0g-cli-setup/main/install.sh | ZEROG_API_KEY=sk-... bash -s -- --tools kilo,codex
 ```
 
-`--tools` takes any of `kilo`, `opencode`, `kimi`, `codex`, `claude`, or `all`. Read [`install.sh`](install.sh) first if you like; the sections below do the same thing by hand.
+`--tools` takes any of `kilo`, `opencode`, `kimi`, `codex`, `claude`, or `all`.
 
-## Contents
+Prefer to read it first? It's a single file: [`install.sh`](install.sh). It needs `curl` and `python3`, which macOS and most Linux systems already have.
 
-0. [Quick install](#quick-install)
-1. [Get your API key](#get-your-api-key): [sign in](#1-sign-in) · [deposit](#2-deposit-0g-tokens) · [create the key](#3-create-the-key) · [save it](#4-save-the-key-once)
-2. Set up your tool: [Kilo CLI](#kilo-cli) · [OpenCode](#opencode) · [Codex CLI](#openai-codex-cli) · [Kimi Code CLI](#kimi-code-cli) · [Claude Code](#claude-code)
-3. [Troubleshooting](#troubleshooting)
-4. [Saving tokens](#saving-tokens)
-5. [Sources](#sources)
+[↑ Back to contents](#contents)
 
-Start with **Get your API key**, then go straight to the tool you use.
+### Option B: Set up manually
 
-## Get your API key
+Save your key once, then follow the section for each tool you use.
 
-You need three things before any tool will work: a 0G account, a deposit of 0G tokens, and an API key.
-
-### 1. Sign in
-
-Go to [pc.0g.ai](https://pc.0g.ai) and click **Get API Key**. You can sign in two ways:
-
-- **With a crypto wallet**: MetaMask or WalletConnect.
-- **With a social account**: Google, X, Discord or TikTok. This creates a wallet for you automatically, so you don't need one already.
-
-### 2. Deposit 0G tokens
-
-The Router is pay-as-you-go: there's no subscription, and each request is paid from a balance you deposit up front.
-
-1. Open **Dashboard → Deposit**.
-2. Enter an amount of 0G tokens and confirm the transaction in your wallet. It's a normal on-chain transaction.
-3. The balance is usable a few seconds after the transaction confirms.
-
-Use **mainnet** for real work. Mainnet and testnet have separate balances and separate API keys, so a key made on one won't spend tokens deposited on the other.
-
-You need 0G tokens in your wallet on 0G mainnet before you can deposit. The docs don't state a minimum deposit amount.
-
-### 3. Create the key
-
-1. Open **Dashboard → API Keys** and click **Create**.
-2. Copy the key right away. It starts with `sk-`, and **0G never shows it again**. If you lose it, create a new one.
-
-Keep the key out of code, screenshots and git repos. Anyone with it can spend your balance.
-
-### 4. Save the key once
+#### Save your key
 
 Save the key as an environment variable so every tool can read it without pasting it into config files:
 
@@ -141,11 +180,7 @@ curl https://router-api.0g.ai/v1/chat/completions \
 
 A reply means you're ready. A `402 insufficient_balance` error means the key works but the deposit hasn't landed or ran out.
 
-Note that pc.0g.ai is the dashboard, not the API. Every tool below points at `router-api.0g.ai`.
-
-[↑ Back to contents](#contents)
-
-## Kilo CLI
+#### Kilo CLI
 
 Kilo can use every 0G model, including Claude, by defining two providers: one in OpenAI format and one in Anthropic format.
 
@@ -198,7 +233,7 @@ In the app, switch models with `/models`. If you use Kilo's login flow instead o
 
 [↑ Back to contents](#contents)
 
-## OpenCode
+#### OpenCode
 
 Kilo is built on OpenCode, so the setup is the same: two providers, one in OpenAI format and one in Anthropic format, giving you every 0G model including Claude.
 
@@ -215,49 +250,7 @@ In the app, switch models with `/models`. If you use OpenCode's `/connect` inste
 
 [↑ Back to contents](#contents)
 
-## OpenAI Codex CLI
-
-Codex only speaks OpenAI's Responses format, and on 0G only some models support it: those with `responses` in `supported_formats`. List them with:
-
-```bash
-curl -s https://router-api.0g.ai/v1/models | python3 -c "import json,sys;print([m['id'] for m in json.load(sys.stdin)['data'] if 'responses' in m.get('supported_formats',[])])"
-```
-
-Setting it up as a profile keeps your normal ChatGPT login as the default.
-
-1. Add the provider to the end of `~/.codex/config.toml` ([`configs/codex-config.toml`](configs/codex-config.toml)):
-
-   ```toml
-   [model_providers.zerog]
-   name = "0G Router"
-   base_url = "https://router-api.0g.ai/v1"
-   env_key = "ZEROG_API_KEY"
-   wire_api = "responses"
-   ```
-
-2. Create the profile as its own file, `~/.codex/zerog.config.toml` ([`configs/codex-zerog.config.toml`](configs/codex-zerog.config.toml)):
-
-   ```toml
-   model_provider = "zerog"
-   model = "glm-5.3-flash"
-   ```
-
-   Recent Codex versions require profiles in separate files. A `[profiles.zerog]` table inside `config.toml` fails with "cannot be used while config.toml contains legacy profile config".
-
-3. Run it:
-
-   ```bash
-   codex -p zerog
-   codex -p zerog -m qwen3-coder-flash   # any model from the list above
-   ```
-
-Picking a model outside that list, including from Codex's own `/model` menu, fails with `not available on the responses API format`. Codex dropped support for the older chat format, so there's no workaround inside Codex; use Kilo, OpenCode or Kimi Code for those models.
-
-Codex prints `Model metadata for glm-5.3-flash not found` on startup. That warning is harmless: it just uses default settings for models it doesn't know.
-
-[↑ Back to contents](#contents)
-
-## Kimi Code CLI
+#### Kimi Code CLI
 
 Kimi Code supports both API formats, so it can use every 0G model including Claude. Its config lives at `~/.kimi-code/config.toml` (not `~/.kimi`, which older docs mention).
 
@@ -305,7 +298,49 @@ Run it from your project folder: `kimi`, or `kimi -m claude-sonnet-5`. If it off
 
 [↑ Back to contents](#contents)
 
-## Claude Code
+#### OpenAI Codex CLI
+
+Codex only speaks OpenAI's Responses format, and on 0G only some models support it: those with `responses` in `supported_formats`. List them with:
+
+```bash
+curl -s https://router-api.0g.ai/v1/models | python3 -c "import json,sys;print([m['id'] for m in json.load(sys.stdin)['data'] if 'responses' in m.get('supported_formats',[])])"
+```
+
+Setting it up as a profile keeps your normal ChatGPT login as the default.
+
+1. Add the provider to the end of `~/.codex/config.toml` ([`configs/codex-config.toml`](configs/codex-config.toml)):
+
+   ```toml
+   [model_providers.zerog]
+   name = "0G Router"
+   base_url = "https://router-api.0g.ai/v1"
+   env_key = "ZEROG_API_KEY"
+   wire_api = "responses"
+   ```
+
+2. Create the profile as its own file, `~/.codex/zerog.config.toml` ([`configs/codex-zerog.config.toml`](configs/codex-zerog.config.toml)):
+
+   ```toml
+   model_provider = "zerog"
+   model = "glm-5.3-flash"
+   ```
+
+   Recent Codex versions require profiles in separate files. A `[profiles.zerog]` table inside `config.toml` fails with "cannot be used while config.toml contains legacy profile config".
+
+3. Run it:
+
+   ```bash
+   codex -p zerog
+   codex -p zerog -m qwen3-coder-flash   # any model from the list above
+   ```
+
+Picking a model outside that list, including from Codex's own `/model` menu, fails with `not available on the responses API format`. Codex dropped support for the older chat format, so there's no workaround inside Codex; use Kilo, OpenCode or Kimi Code for those models.
+
+Codex prints `Model metadata for glm-5.3-flash not found` on startup. That warning is harmless: it just uses default settings for models it doesn't know.
+
+[↑ Back to contents](#contents)
+
+#### Claude Code
 
 Claude Code speaks Anthropic's format, so on 0G it can use the Claude models plus every other model that supports that format. At the time of writing those are `glm-5.3`, `glm-5.3-flash`, `glm-5.3-flashx`, `deepseek-v4-pro`, `deepseek-v4-flash`, `mimo-v2.6-pro`, `mimo-v2.6-flash`, `step-5-preview`, `hy4-preview` and `0gm-1.0-35b-a3b`.
 
